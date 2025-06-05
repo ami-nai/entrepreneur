@@ -11,9 +11,9 @@ class OrderItem {
 
   factory OrderItem.fromMap(Map<String, dynamic> data) {
     return OrderItem(
-      title: data['title'],
-      price: data['price'],
-      quantity: data['quantity'],
+      title: data['title'] ?? 'Unknown Item', // Fallback to 'Unknown Item' if null
+      price: (data['price'] as num?)?.toDouble() ?? 0.0, // Fallback to 0.0 if null
+      quantity: data['quantity'] ?? 0, // Fallback to 0 if null
     );
   }
 

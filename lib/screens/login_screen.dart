@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
               SizedBox(height: 30),
               // Footer Text
               Text(
-                "Powered by Flutter & Firebase",
+                "Powered by ami_nai",
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],

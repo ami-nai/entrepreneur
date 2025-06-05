@@ -48,53 +48,57 @@ Widget build(BuildContext context) {
       children: [
         Expanded( // Use Expanded or Flexible to allow the ListView to take only available space
           child: StreamBuilder<QuerySnapshot>(
-            stream: _firestore.collection('orders').snapshots(),
-            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-              if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+  stream: _firestore
+      .collection('orders')
+      .where('sellerId', isEqualTo: userId) // Filter by sellerId
+      .snapshots(),
+  builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+    if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
 
-              var orders = snapshot.data!.docs.map((doc) {
-                var data = doc.data() as Map<String, dynamic>;
-                return custom.Order.fromMap(doc.id, data); // Map Firestore doc to Order model
-              }).toList();
+    var orders = snapshot.data!.docs.map((doc) {
+      var data = doc.data() as Map<String, dynamic>;
+      return custom.Order.fromMap(doc.id, data); // Map Firestore doc to Order model
+    }).toList();
 
-              if (orders.isEmpty) {
-                return Center(child: Text("No orders available."));
-              }
+    if (orders.isEmpty) {
+      return Center(child: Text("No orders available."));
+    }
 
-              return ListView.builder(
-                itemCount: orders.length,
-                itemBuilder: (context, index) {
-                  var order = orders[index];
+    return ListView.builder(
+      itemCount: orders.length,
+      itemBuilder: (context, index) {
+        var order = orders[index];
 
-                  return Card(
-                    child: ExpansionTile(
-                      title: Text("Order #${order.id} - ${order.status}"),
-                      subtitle: Text("Total: \$${order.totalAmount.toStringAsFixed(2)}"),
-                      children: [
-                        ...order.items.map((item) => ListTile(
-                              title: Text(item.title),
-                              subtitle: Text("\$${item.price.toStringAsFixed(2)} x ${item.quantity}"),
-                            )),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            ElevatedButton(
-                              onPressed: () => _updateOrderStatus(order.id, 'confirmed'),
-                              child: Text("Confirm"),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => _updateOrderStatus(order.id, 'shipped'),
-                              child: Text("Ship"),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
+        return Card(
+          child: ExpansionTile(
+            title: Text("Order #${order.id} - ${order.status}"),
+            subtitle: Text("Total: \$${order.totalAmount.toStringAsFixed(2)}"),
+            children: [
+              ...order.items.map((item) => ListTile(
+                    title: Text(item.title),
+                    subtitle: Text("\$${item.price.toStringAsFixed(2)} x ${item.quantity}"),
+                  )),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => _updateOrderStatus(order.id, 'confirmed'),
+                    child: Text("Confirm"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _updateOrderStatus(order.id, 'shipped'),
+                    child: Text("Ship"),
+                  ),
+                ],
+              ),
+            ],
           ),
+        );
+      },
+    );
+  },
+)
+
         ),
       ],
     ),

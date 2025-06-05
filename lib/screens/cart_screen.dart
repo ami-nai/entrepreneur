@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 
 class CartScreen extends StatefulWidget {
   @override
@@ -14,21 +17,23 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _placeOrder(List<DocumentSnapshot> cartItems) async {
     if (cartItems.isEmpty) return;
 
-    // Create an order document
-    await _firestore.collection('orders').add({
-      'userId': userId,
-      'items': cartItems.map((item) => item.data()).toList(),
-      'status': 'pending', // Order initially marked as pending
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _firestore.collection('orders').add({
+        'userId': userId,
+        'items': cartItems.map((item) => item.data()).toList(),
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    // Clear the cart
-    for (var item in cartItems) {
-      await _firestore.collection('cart').doc(item.id).delete();
+      // Clear the cart
+      for (var item in cartItems) {
+        await _firestore.collection('users').doc(userId).collection('cart').doc(item.id).delete();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Order placed successfully!")));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to place order. Try again.")));
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Order placed successfully!")));
-    Navigator.pop(context);
   }
 
   @override
@@ -36,11 +41,17 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       appBar: AppBar(title: Text("Your Cart")),
       body: StreamBuilder(
-        stream: _firestore.collection('cart').where('userId', isEqualTo: userId).snapshots(),
+        stream: _firestore.collection('users').doc(userId).collection('cart').snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
 
           var cartItems = snapshot.data!.docs;
+
+          if (cartItems.isEmpty) {
+            return Center(child: Text("Your cart is empty."));
+          }
+
+          double totalPrice = cartItems.fold(0.0, (sum, item) => sum + (item['price'] * item['quantity']));
 
           return Column(
             children: [
@@ -50,21 +61,39 @@ class _CartScreenState extends State<CartScreen> {
                   itemBuilder: (context, index) {
                     var item = cartItems[index];
                     return ListTile(
-                      title: Text(item['title']),
-                      subtitle: Text("\$${item['price']}"),
+                      leading: item['imageBase64'] != null
+                          ? Image.memory(
+                              base64Decode(item['imageBase64']),
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                            )
+                          : Icon(Icons.image, size: 50),
+                      title: Text(item['name']),
+                      subtitle: Text("Price: \$${item['price']}"),
                       trailing: IconButton(
                         icon: Icon(Icons.delete),
                         onPressed: () async {
-                          await _firestore.collection('cart').doc(item.id).delete();
+                          await _firestore.collection('users').doc(userId).collection('cart').doc(item.id).delete();
                         },
                       ),
                     );
                   },
                 ),
               ),
-              ElevatedButton(
-                onPressed: () => _placeOrder(cartItems),
-                child: Text("Place Order"),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Total: \$${totalPrice.toStringAsFixed(2)}",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    ElevatedButton(
+                      onPressed: () => _placeOrder(cartItems),
+                      child: Text("Place Order"),
+                    ),
+                  ],
+                ),
               ),
             ],
           );
