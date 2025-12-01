@@ -119,7 +119,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   );
                 }
               },
-              child: Text("Add Product"),
+              child: Text("Add Your Product"),
             ),
           ],
         ),
